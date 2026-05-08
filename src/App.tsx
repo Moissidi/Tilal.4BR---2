@@ -809,7 +809,7 @@ const App = () => {
 
   // --- RENDER COMPONENT: DETAILS PAGE ---
   const renderDetailsPage = () => {
-    const isOasis = activeVilla === 'oasis';
+    
     const features = [
       { icon: <Home size={24} />, title: "4 Bedrooms", sub: "Attached Baths" },
       { icon: <Layers size={24} />, title: "G+2+Roof", sub: "Multi-Level" },
