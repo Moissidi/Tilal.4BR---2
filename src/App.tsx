@@ -27,13 +27,17 @@ import {
 
 // --- BACKGROUND CANVAS PARTICLES ---
 const ParticleCanvas = () => {
-  const canvasRef = useRef(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null); // FIX 1
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return; // FIX 2
+
     const ctx = canvas.getContext('2d');
-    let animationFrameId;
-    let particles = [];
+    if (!ctx) return; // FIX 3
+
+    let animationFrameId: number; // FIX 4
+    let particles: { x: number; y: number; vx: number; vy: number; size: number; phase: number; phaseSpeed: number; }[] = [];
     
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -42,7 +46,6 @@ const ParticleCanvas = () => {
     window.addEventListener('resize', resize);
     resize();
 
-    // Create 60 particles
     for (let i = 0; i < 60; i++) {
       particles.push({
         x: Math.random() * canvas.width,
@@ -94,21 +97,23 @@ const ParticleCanvas = () => {
 
 // --- SPOTLIGHT CURSOR (LAZY FOLLOW - DESKTOP ONLY) ---
 const SpotlightCursor = () => {
-  const cursorRef = useRef(null);
-  const pos = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
-  const target = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+  const cursorRef = useRef<HTMLDivElement | null>(null); // FIX 5
+  const pos = useRef({ x: 0, y: 0 });
+  const target = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    // Check if device supports hover (desktop)
+    pos.current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    target.current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+
     if (window.matchMedia("(hover: none)").matches) return;
 
-    const onMouseMove = (e) => {
+    const onMouseMove = (e: MouseEvent) => { // FIX 6
       target.current.x = e.clientX;
       target.current.y = e.clientY;
     };
     window.addEventListener('mousemove', onMouseMove);
 
-    let animationFrameId;
+    let animationFrameId: number; // FIX 7
     const update = () => {
       pos.current.x += (target.current.x - pos.current.x) * 0.08;
       pos.current.y += (target.current.y - pos.current.y) * 0.08;
@@ -129,7 +134,7 @@ const SpotlightCursor = () => {
   return (
     <div 
       ref={cursorRef}
-      className="hidden md:block fixed top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none z-40 mix-blend-screen"
+      className="hidden md:block fixed top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none z-40"
       style={{
         background: 'radial-gradient(circle, rgba(200,169,110, 0.06) 0%, transparent 60%)',
         willChange: 'transform'
@@ -140,7 +145,7 @@ const SpotlightCursor = () => {
 
 const App = () => {
   const [view, setView] = useState('presentation');
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showLeadForm, setShowLeadForm] = useState(false);
   
   const [leadForm, setLeadForm] = useState({ name: '', email: '', phone: '' });
@@ -375,12 +380,12 @@ const App = () => {
     setTimeout(() => setIsAnimating(false), 800);
   };
 
-  const openDetailsPage = (villaType) => {
+  const openDetailsPage = (villaType: string) => { // FIX 8
     setActiveVilla(villaType);
     setView('details');
   };
 
-  const handleLeadSubmit = async (e) => {
+  const handleLeadSubmit = async (e: React.FormEvent<HTMLFormElement>) => { // FIX 9
     e.preventDefault();
     setIsSubmitting(true);
     
@@ -392,9 +397,7 @@ const App = () => {
 
       await fetch(GOOGLE_SCRIPT_URL, {
         method: "POST",
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formParams.toString(),
         mode: "no-cors"
       });
@@ -414,16 +417,17 @@ const App = () => {
     }
   };
 
-  // --- RENDER COMPONENT: PRESENTATION VIEW ---
   const renderPresentation = () => (
     <div className="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden z-10">
       {slides.map((slide, index) => (
         <div 
           key={slide.id}
-          className={`absolute w-full h-full flex flex-col items-center slide-transition px-4 sm:px-6 pt-20 sm:pt-24 pb-28 sm:pb-32 overflow-x-hidden overflow-y-auto overscroll-y-contain no-scrollbar
-            ${index === currentSlide ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto' : 
-              index < currentSlide ? 'opacity-0 -translate-y-12 scale-95 pointer-events-none' : 
-              'opacity-0 translate-y-12 scale-95 pointer-events-none'}`}
+          className="absolute w-full h-full flex flex-col items-center slide-transition px-4 sm:px-6 pt-20 sm:pt-24 pb-28 sm:pb-32 overflow-x-hidden overflow-y-auto overscroll-y-contain no-scrollbar"
+          style={{
+            opacity: index === currentSlide ? 1 : 0,
+            transform: index === currentSlide ? 'translateY(0) scale(1)' : index < currentSlide ? 'translateY(-48px) scale(0.95)' : 'translateY(48px) scale(0.95)',
+            pointerEvents: index === currentSlide ? 'auto' : 'none'
+          }}
         >
           <div className="w-full max-w-7xl flex flex-col items-center text-center pb-12">
             <p className="text-[0.65rem] sm:text-xs tracking-[0.3em] sm:tracking-[0.4em] uppercase text-[#c8a96e] mb-4 sm:mb-6 mt-4 font-semibold">
@@ -438,7 +442,6 @@ const App = () => {
               {slide.subtitle}
             </h2>
 
-            {/* Vision Slide */}
             {slide.id === 'vision' && (
               <div className="max-w-2xl mx-auto px-4">
                 <div className="w-[1px] h-10 sm:h-12 bg-gradient-to-b from-[#c8a96e] to-transparent mx-auto mb-6 sm:mb-8" />
@@ -448,7 +451,6 @@ const App = () => {
               </div>
             )}
 
-            {/* Combined Statistics Slide: Luxury + Amenities */}
             {slide.id === 'superiority' && (
               <div className="w-full flex flex-col items-center pb-10">
                 <div className="w-full overflow-x-auto overscroll-x-contain no-scrollbar pb-6 sm:pb-12">
@@ -461,31 +463,21 @@ const App = () => {
                         style={{ transitionDelay: `${i * 100}ms` }}
                       >
                         <div className="flex flex-col items-center w-full max-w-full">
-                          <div className="text-[#c8a96e] mb-6 sm:mb-8 opacity-100 brightness-125 flex items-center justify-center scale-125">
-                            {stat.icon}
-                          </div>
+                          <div className="text-[#c8a96e] mb-6 sm:mb-8 opacity-100 brightness-125 flex items-center justify-center scale-125">{stat.icon}</div>
                           <div className="flex flex-col items-center w-full">
-                            <div className="serif-font text-2xl sm:text-3xl md:text-4xl text-[#ede0c4] mb-5 tracking-widest leading-none font-medium whitespace-nowrap text-center">
-                              {stat.value}
-                            </div>
+                            <div className="serif-font text-2xl sm:text-3xl md:text-4xl text-[#ede0c4] mb-5 tracking-widest leading-none font-medium whitespace-nowrap text-center">{stat.value}</div>
                             <div className="w-12 h-[1px] bg-gradient-to-r from-transparent via-[#c8a96e]/50 to-transparent mb-5" />
-                            <div className="text-[0.65rem] sm:text-[0.75rem] tracking-[0.4em] uppercase text-[#e2c98a] font-bold text-center leading-relaxed brightness-150 px-2 opacity-95">
-                              {stat.label}
-                            </div>
+                            <div className="text-[0.65rem] sm:text-[0.75rem] tracking-[0.4em] uppercase text-[#e2c98a] font-bold text-center leading-relaxed brightness-150 px-2 opacity-95">{stat.label}</div>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
-
                 <div className="flex flex-col items-center w-full my-4">
                   <div className="w-[1px] h-10 bg-gradient-to-b from-transparent via-[#c8a96e]/50 to-[#c8a96e]/20 mb-6" />
-                  <h3 className="serif-font font-light text-4xl sm:text-5xl md:text-7xl lg:text-8xl text-[#ede0c4] mb-8 gold-shimmer-text leading-tight px-4">
-                    {slide.amenitiesTitle}
-                  </h3>
+                  <h3 className="serif-font font-light text-4xl sm:text-5xl md:text-7xl lg:text-8xl text-[#ede0c4] mb-8 gold-shimmer-text leading-tight px-4">{slide.amenitiesTitle}</h3>
                 </div>
-
                 <div className="w-full overflow-x-auto overscroll-x-contain no-scrollbar pb-6 sm:pb-0">
                   <div className="flex flex-nowrap lg:grid lg:grid-cols-4 gap-4 sm:gap-6 w-full px-4 min-w-max lg:min-w-0 items-stretch">
                     {slide.amenitiesStats?.map((stat, i) => (
@@ -496,17 +488,11 @@ const App = () => {
                         style={{ transitionDelay: `${(i + 4) * 100}ms` }}
                       >
                         <div className="flex flex-col items-center w-full max-w-full">
-                          <div className="text-[#c8a96e] mb-6 sm:mb-8 opacity-100 brightness-125 flex items-center justify-center scale-125">
-                            {stat.icon}
-                          </div>
+                          <div className="text-[#c8a96e] mb-6 sm:mb-8 opacity-100 brightness-125 flex items-center justify-center scale-125">{stat.icon}</div>
                           <div className="flex flex-col items-center w-full">
-                            <div className="serif-font text-2xl sm:text-3xl md:text-4xl text-[#ede0c4] mb-5 tracking-widest leading-none font-medium whitespace-nowrap text-center">
-                              {stat.value}
-                            </div>
+                            <div className="serif-font text-2xl sm:text-3xl md:text-4xl text-[#ede0c4] mb-5 tracking-widest leading-none font-medium whitespace-nowrap text-center">{stat.value}</div>
                             <div className="w-12 h-[1px] bg-gradient-to-r from-transparent via-[#c8a96e]/50 to-transparent mb-5" />
-                            <div className="text-[0.65rem] sm:text-[0.75rem] tracking-[0.4em] uppercase text-[#e2c98a] font-bold text-center leading-relaxed brightness-150 px-2 opacity-95">
-                              {stat.label}
-                            </div>
+                            <div className="text-[0.65rem] sm:text-[0.75rem] tracking-[0.4em] uppercase text-[#e2c98a] font-bold text-center leading-relaxed brightness-150 px-2 opacity-95">{stat.label}</div>
                           </div>
                         </div>
                       </div>
@@ -516,7 +502,6 @@ const App = () => {
               </div>
             )}
 
-            {/* Proximity Slide */}
             {slide.id === 'proximity' && (
               <div className="w-full mt-4 max-w-2xl mx-auto flex flex-col items-center space-y-3 sm:space-y-4 pb-4">
                 {slide.locations?.map((loc, i) => (
@@ -537,9 +522,7 @@ const App = () => {
                       </span>
                     </div>
                     <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
-                      <span className="serif-font text-lg sm:text-2xl text-[#c8a96e]">
-                        {loc.time}
-                      </span>
+                      <span className="serif-font text-lg sm:text-2xl text-[#c8a96e]">{loc.time}</span>
                       <Clock size={16} className="text-[#6a6b57] opacity-60" />
                     </div>
                   </a>
@@ -547,7 +530,6 @@ const App = () => {
               </div>
             )}
 
-            {/* Pricing Slide */}
             {slide.id === 'pricing' && (
               <div className="w-full mt-4 max-w-5xl mx-auto flex flex-col items-center">
                 <div className="flex flex-col items-center mb-8 sm:mb-12 w-full">
@@ -569,25 +551,19 @@ const App = () => {
                     </div>
                   </div>
                 </div>
-                
                 <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-8">
                   {slide.pricingInfo?.plans.map((plan, i) => (
-                    <button 
-                      key={i} 
-                      onClick={() => setActivePlan(i)} 
+                    <button key={i} onClick={() => setActivePlan(i)} 
                       className={`px-4 sm:px-6 py-3 sm:py-4 text-[0.6rem] sm:text-xs tracking-[0.2em] uppercase transition-all border rounded-xl
-                        ${activePlan === i ? 'border-[#c8a96e] bg-[#c8a96e]/20 text-[#c8a96e] font-bold' : 'border-[#1e2019] text-[#6a6b57] hover:text-[#ede0c4] hover:border-[#c8a96e]/50'}`}
-                    >
+                        ${activePlan === i ? 'border-[#c8a96e] bg-[#c8a96e]/20 text-[#c8a96e] font-bold' : 'border-[#1e2019] text-[#6a6b57] hover:text-[#ede0c4] hover:border-[#c8a96e]/50'}`}>
                       {plan.name}
                     </button>
                   ))}
                 </div>
-
                 <div className="w-full flex flex-col items-center min-h-[400px]">
                   <button onClick={() => setShowTable(!showTable)} className="mb-8 sm:mb-12 flex items-center gap-3 text-[0.65rem] sm:text-xs tracking-[0.2em] uppercase text-[#c8a96e] border border-[#c8a96e]/30 px-6 py-3 sm:py-4 hover:bg-[#c8a96e]/10 rounded-xl transition-all">
                     <List size={16} /> {showTable ? "Hide Detailed Schedule" : "View Detailed Schedule"}
                   </button>
-
                   {!showTable ? (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 w-full px-4 animate-fade-in">
                       {slide.pricingInfo?.plans[activePlan].breakdown.map((item, i) => (
@@ -631,7 +607,6 @@ const App = () => {
               </div>
             )}
 
-            {/* Inventory Slide */}
             {slide.id === 'inventory_matrix' && (
               <div className="w-full mt-6 px-2 overflow-x-auto no-scrollbar">
                 <div className="min-w-[800px] border border-[#c8a96e]/30 bg-[#080a06]/80 rounded-2xl overflow-hidden">
@@ -659,7 +634,6 @@ const App = () => {
               </div>
             )}
 
-            {/* Comparison Slide */}
             {slide.id === 'comparison' && (
               <div className="w-full mt-6 flex flex-col items-center">
                 <div className="w-full border border-[#c8a96e]/30 bg-[#080a06]/80 rounded-2xl overflow-hidden overflow-x-auto no-scrollbar">
@@ -678,9 +652,7 @@ const App = () => {
                           <td className="py-6 px-8 text-sm sm:text-base text-[#ede0c4] whitespace-nowrap tracking-wide flex items-center gap-4 h-full">
                             {row.community}
                             {row.highlighted && (
-                              <span className="bg-[#c8a96e] text-[#080a06] text-[0.6rem] px-3 py-1 rounded-md font-bold tracking-widest whitespace-nowrap">
-                                BEST PSF VALUE
-                              </span>
+                              <span className="bg-[#c8a96e] text-[#080a06] text-[0.6rem] px-3 py-1 rounded-md font-bold tracking-widest whitespace-nowrap">BEST PSF VALUE</span>
                             )}
                           </td>
                           <td className={`py-6 px-8 text-base sm:text-xl text-right serif-font font-medium ${row.highlighted ? 'text-[#c8a96e]' : 'text-[#c8a96e]'}`}>{row.psf}</td>
@@ -691,18 +663,14 @@ const App = () => {
                     </tbody>
                   </table>
                 </div>
-
-                {/* Sales Transactions Spheres */}
                 <div className="w-full mt-12 sm:mt-20 flex flex-col items-center animate-fade-in">
                   <div className="w-[1px] h-12 bg-gradient-to-b from-transparent via-[#c8a96e]/50 to-transparent mb-8" />
                   <h3 className="serif-font font-light text-3xl sm:text-5xl text-[#ede0c4] uppercase tracking-widest mb-3">{slide.transactions?.title}</h3>
                   <p className="text-[0.65rem] sm:text-xs tracking-[0.3em] uppercase text-[#ede0c4]/80 mb-12">{slide.transactions?.subtitle}</p>
-
                   <div className="flex flex-col sm:flex-row gap-10 sm:gap-20 justify-center items-center w-full">
-                    {/* Ready Sphere */}
                     <div className="flex flex-col items-center">
                       <h4 className="serif-font text-2xl sm:text-3xl text-[#ede0c4] tracking-[0.2em] mb-8 uppercase">{slide.transactions?.ready.type}</h4>
-                      <div className="w-64 h-64 sm:w-80 sm:h-80 rounded-full border border-white/5 flex flex-col items-center justify-center p-8 text-center shadow-2xl relative overflow-hidden" 
+                      <div className="w-64 h-64 sm:w-80 sm:h-80 rounded-full border border-white/5 flex flex-col items-center justify-center p-8 text-center shadow-2xl"
                            style={{ background: 'radial-gradient(circle at 40% 30%, rgba(200, 210, 190, 0.2) 0%, rgba(10, 12, 8, 1) 70%)' }}>
                         <p className="text-[0.65rem] sm:text-xs tracking-[0.15em] uppercase text-[#ede0c4]/80 mb-6 leading-relaxed max-w-[80%]">{slide.transactions?.ready.label}</p>
                         <div className="flex items-center justify-center gap-3 mt-2">
@@ -714,11 +682,9 @@ const App = () => {
                         </div>
                       </div>
                     </div>
-
-                    {/* Off-Plan Sphere */}
                     <div className="flex flex-col items-center">
                       <h4 className="serif-font text-2xl sm:text-3xl text-[#ede0c4] tracking-[0.2em] mb-8 uppercase">{slide.transactions?.offPlan.type}</h4>
-                      <div className="w-64 h-64 sm:w-80 sm:h-80 rounded-full border border-white/5 flex flex-col items-center justify-center p-8 text-center shadow-2xl relative overflow-hidden" 
+                      <div className="w-64 h-64 sm:w-80 sm:h-80 rounded-full border border-white/5 flex flex-col items-center justify-center p-8 text-center shadow-2xl"
                            style={{ background: 'radial-gradient(circle at 40% 30%, rgba(200, 210, 190, 0.2) 0%, rgba(10, 12, 8, 1) 70%)' }}>
                         <p className="text-[0.65rem] sm:text-xs tracking-[0.15em] uppercase text-[#ede0c4]/80 mb-6 leading-relaxed max-w-[80%]">{slide.transactions?.offPlan.label}</p>
                         <div className="flex items-center justify-center gap-3 mt-2">
@@ -732,35 +698,26 @@ const App = () => {
                     </div>
                   </div>
                 </div>
-
                 <p className="mt-16 text-[0.6rem] sm:text-xs tracking-wider uppercase text-[#6a6b57]">{slide.footer}</p>
               </div>
             )}
 
-            {/* Collections Slide */}
             {slide.id === 'collections' && (
               <div className="w-full mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-5xl mx-auto px-4">
                 {['oasis', 'dunes'].map((villa) => (
-                  <div 
-                    key={villa}
-                    onClick={() => setActiveVilla(villa)}
+                  <div key={villa} onClick={() => setActiveVilla(villa)}
                     className={`collection-toggle p-8 sm:p-12 text-left border transition-all duration-500 cursor-pointer flex flex-col justify-between min-h-[320px] sm:min-h-[400px]
-                      ${activeVilla === villa ? 'border-[#c8a96e] bg-[#c8a96e]/10 scale-[1.02] shadow-xl' : 'border-[#1e2019] bg-black/40 opacity-50 grayscale'}`}
-                  >
+                      ${activeVilla === villa ? 'border-[#c8a96e] bg-[#c8a96e]/10 scale-[1.02] shadow-xl' : 'border-[#1e2019] bg-black/40 opacity-50 grayscale'}`}>
                     <div>
                       <h3 className="serif-font text-4xl sm:text-6xl text-[#ede0c4] mb-2 capitalize">The {villa}</h3>
                       <p className="text-[0.6rem] sm:text-xs tracking-[0.3em] text-[#c8a96e] uppercase mb-6 sm:mb-10 font-semibold">{villa === 'oasis' ? 'Heart of Community' : 'Comfort & Active'}</p>
-                      
                       {activeVilla === villa && (
-                        <div 
-                          onClick={(e) => { e.stopPropagation(); openDetailsPage(villa); }}
-                          className="inline-flex items-center gap-3 text-[0.65rem] sm:text-xs tracking-[0.2em] uppercase text-[#c8a96e] hover:text-white transition-colors font-bold mt-4"
-                        >
+                        <div onClick={(e) => { e.stopPropagation(); openDetailsPage(villa); }}
+                          className="inline-flex items-center gap-3 text-[0.65rem] sm:text-xs tracking-[0.2em] uppercase text-[#c8a96e] hover:text-white transition-colors font-bold mt-4">
                           Explore Specs <ArrowRight size={16} />
                         </div>
                       )}
                     </div>
-                    
                     <ul className="text-[0.7rem] sm:text-sm text-[#ede0c4]/70 space-y-3 mt-auto font-light">
                       <li className="flex items-center gap-3"><Check size={12} className="text-[#c8a96e]"/> {villa === 'oasis' ? 'Centrally Located' : 'Family Oriented'}</li>
                       <li className="flex items-center gap-3"><Check size={12} className="text-[#c8a96e]"/> {villa === 'oasis' ? 'Beachfront Access' : 'Green Walkways'}</li>
@@ -770,32 +727,20 @@ const App = () => {
               </div>
             )}
 
-            {/* Advisory Slide */}
             {slide.id === 'advisory' && (
               <div className="w-full flex flex-col items-center px-4">
                 <div className="relative w-32 h-32 sm:w-48 sm:h-48 mb-8 rounded-full border border-[#c8a96e]/30 p-2 bg-[#c8a96e]/5">
                   <div className="w-full h-full rounded-full overflow-hidden bg-[#080a06]">
-                    <img 
-                      src={PROFILE_PIC} 
-                      alt={slide.advisor?.name} 
-                      className="w-full h-full object-cover grayscale-[0.3] hover:grayscale-0 transition-all"
-                    />
+                    <img src={PROFILE_PIC} alt={slide.advisor?.name} className="w-full h-full object-cover grayscale-[0.3] hover:grayscale-0 transition-all" />
                   </div>
                 </div>
-                
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 w-full max-w-lg mt-8">
-                  <a 
-                    href={WA_LINK} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="flex-1 flex items-center justify-center gap-3 bg-[#c8a96e] text-[#080a06] py-5 sm:py-6 text-[0.65rem] sm:text-xs tracking-[0.2em] uppercase font-bold hover:bg-[#e2c98a] transition-all rounded-xl"
-                  >
+                  <a href={WA_LINK} target="_blank" rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-3 bg-[#c8a96e] text-[#080a06] py-5 sm:py-6 text-[0.65rem] sm:text-xs tracking-[0.2em] uppercase font-bold hover:bg-[#e2c98a] transition-all rounded-xl">
                     <MessageCircle size={18} fill="currentColor" /> WhatsApp
                   </a>
-                  <a 
-                    href={`tel:${slide.advisor?.phone.replace(/\s+/g, '')}`}
-                    className="flex-1 flex items-center justify-center gap-3 border border-[#c8a96e]/30 px-6 py-5 sm:py-6 text-[0.65rem] sm:text-xs tracking-[0.2em] uppercase text-[#ede0c4] bg-[#c8a96e]/5 rounded-xl hover:bg-[#c8a96e]/10 transition-colors"
-                  >
+                  <a href={`tel:${slide.advisor?.phone.replace(/\s+/g, '')}`}
+                    className="flex-1 flex items-center justify-center gap-3 border border-[#c8a96e]/30 px-6 py-5 sm:py-6 text-[0.65rem] sm:text-xs tracking-[0.2em] uppercase text-[#ede0c4] bg-[#c8a96e]/5 rounded-xl hover:bg-[#c8a96e]/10 transition-colors">
                     <Phone size={16} /> Call Advisor
                   </a>
                 </div>
@@ -807,16 +752,13 @@ const App = () => {
     </div>
   );
 
-  // --- RENDER COMPONENT: DETAILS PAGE ---
   const renderDetailsPage = () => {
-    
     const features = [
       { icon: <Home size={24} />, title: "4 Bedrooms", sub: "Attached Baths" },
       { icon: <Layers size={24} />, title: "G+2+Roof", sub: "Multi-Level" },
       { icon: <Compass size={24} />, title: "Elevator", sub: "Standard" },
       { icon: <Cpu size={24} />, title: "Smart Home", sub: "Integrated" }
     ];
-
     return (
       <div className="absolute inset-0 w-full h-full bg-[#080a06] z-[100] flex flex-col animate-fade-in px-6 sm:px-16 pt-28 sm:pt-32 pb-16 overflow-y-auto overscroll-y-contain">
         <div className="fixed top-0 left-0 w-full px-6 sm:px-10 py-8 z-[110] flex justify-between items-center bg-[#080a06]/80 backdrop-blur-xl border-b border-[#c8a96e]/10">
@@ -825,7 +767,6 @@ const App = () => {
           </button>
           <div className="serif-font text-xl sm:text-2xl tracking-[0.1em] text-[#6a6b57] uppercase font-light">Binghatti</div>
         </div>
-
         <div className="flex flex-col lg:flex-row gap-12 lg:gap-24 max-w-7xl mx-auto w-full items-center mt-6">
           <div className="text-center lg:text-left w-full lg:flex-1 px-4 sm:px-0">
             <p className="text-[0.6rem] sm:text-xs tracking-[0.4em] uppercase text-[#c8a96e] mb-4 sm:mb-6 font-semibold">Mid Unit Villa Specifications</p>
@@ -865,92 +806,33 @@ const App = () => {
         .slide-transition { transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
         .nav-btn { transition: all 0.3s; background: rgba(8,10,6,0.5); backdrop-filter: blur(8px); pointer-events: auto; }
         .nav-btn:active { transform: scale(0.9); background: var(--gold); color: #080a06; }
-        
-        /* Soft UI adjustments - Border Radius added globally to cards/toggles */
         .interactive-card { border: 1px solid var(--border); border-radius: 20px; background: rgba(255,255,255,0.03); transition: all 0.5s ease-out; backdrop-filter: blur(12px); box-shadow: inset 0 0 20px rgba(200,169,110,0.05); }
         .interactive-card:hover { border-color: var(--gold); background: rgba(200, 169, 110, 0.08); box-shadow: 0 10px 40px -10px rgba(200, 169, 110, 0.2); }
         .collection-toggle { border-radius: 20px; }
-        
         .hide-spin-button { -moz-appearance: textfield; }
         .hide-spin-button::-webkit-inner-spin-button, .hide-spin-button::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .interactive-watermark-bar {
-          position: absolute; bottom: 0; left: 0; right: 0; height: 50px; z-index: 1000;
-          display: flex; align-items: center; justify-content: center;
-          background: linear-gradient(to top, #080a06 80%, transparent);
-          border-top: 1px solid rgba(200, 169, 110, 0.1);
-          backdrop-filter: blur(6px); transition: all 0.3s ease; text-decoration: none !important; 
-        }
-        .watermark-content {
-          white-space: nowrap; display: flex; align-items: center;
-          gap: 0.75rem; color: rgba(200, 169, 110, 0.8);
-        }
-        .watermark-label {
-          font-family: 'Montserrat', sans-serif; font-weight: 300;
-          font-size: 0.6rem; letter-spacing: 0.4em; text-transform: uppercase;
-        }
-
-        /* NEW ORB ANIMATIONS */
-        .orb {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(120px);
-          pointer-events: none;
-          z-index: 0;
-          opacity: 0.4;
-        }
-        .orb-1 {
-          width: 60vw; height: 60vw; max-width: 800px; max-height: 800px;
-          background: radial-gradient(circle, rgba(200,169,110,0.15) 0%, transparent 70%);
-          top: -10%; left: -10%;
-          animation: float1 25s ease-in-out infinite alternate;
-        }
-        .orb-2 {
-          width: 50vw; height: 50vw; max-width: 700px; max-height: 700px;
-          background: radial-gradient(circle, rgba(226,201,138,0.1) 0%, transparent 70%);
-          bottom: -10%; right: -10%;
-          animation: float2 30s ease-in-out infinite alternate;
-        }
-        .orb-3 {
-          width: 40vw; height: 40vw; max-width: 600px; max-height: 600px;
-          background: radial-gradient(circle, rgba(200,169,110,0.12) 0%, transparent 70%);
-          top: 40%; left: 60%;
-          animation: float3 28s ease-in-out infinite alternate;
-        }
-        @keyframes float1 {
-          0% { transform: translate(0, 0) scale(1); opacity: 0.3; }
-          50% { transform: translate(10vw, 5vh) scale(1.1); opacity: 0.5; }
-          100% { transform: translate(-5vw, 15vh) scale(0.9); opacity: 0.3; }
-        }
-        @keyframes float2 {
-          0% { transform: translate(0, 0) scale(0.9); opacity: 0.4; }
-          50% { transform: translate(-15vw, -10vh) scale(1.1); opacity: 0.6; }
-          100% { transform: translate(5vw, -20vh) scale(1); opacity: 0.4; }
-        }
-        @keyframes float3 {
-          0% { transform: translate(0, 0) scale(1.1); opacity: 0.5; }
-          50% { transform: translate(-10vw, 15vh) scale(0.9); opacity: 0.3; }
-          100% { transform: translate(10vw, -10vh) scale(1.2); opacity: 0.5; }
-        }
+        .interactive-watermark-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 50px; z-index: 1000; display: flex; align-items: center; justify-content: center; background: linear-gradient(to top, #080a06 80%, transparent); border-top: 1px solid rgba(200, 169, 110, 0.1); backdrop-filter: blur(6px); transition: all 0.3s ease; text-decoration: none !important; }
+        .watermark-content { white-space: nowrap; display: flex; align-items: center; gap: 0.75rem; color: rgba(200, 169, 110, 0.8); }
+        .watermark-label { font-family: 'Montserrat', sans-serif; font-weight: 300; font-size: 0.6rem; letter-spacing: 0.4em; text-transform: uppercase; }
+        .orb { position: absolute; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; opacity: 0.4; }
+        .orb-1 { width: 60vw; height: 60vw; max-width: 800px; max-height: 800px; background: radial-gradient(circle, rgba(200,169,110,0.15) 0%, transparent 70%); top: -10%; left: -10%; animation: float1 25s ease-in-out infinite alternate; }
+        .orb-2 { width: 50vw; height: 50vw; max-width: 700px; max-height: 700px; background: radial-gradient(circle, rgba(226,201,138,0.1) 0%, transparent 70%); bottom: -10%; right: -10%; animation: float2 30s ease-in-out infinite alternate; }
+        .orb-3 { width: 40vw; height: 40vw; max-width: 600px; max-height: 600px; background: radial-gradient(circle, rgba(200,169,110,0.12) 0%, transparent 70%); top: 40%; left: 60%; animation: float3 28s ease-in-out infinite alternate; }
+        @keyframes float1 { 0% { transform: translate(0,0) scale(1); opacity: 0.3; } 50% { transform: translate(10vw,5vh) scale(1.1); opacity: 0.5; } 100% { transform: translate(-5vw,15vh) scale(0.9); opacity: 0.3; } }
+        @keyframes float2 { 0% { transform: translate(0,0) scale(0.9); opacity: 0.4; } 50% { transform: translate(-15vw,-10vh) scale(1.1); opacity: 0.6; } 100% { transform: translate(5vw,-20vh) scale(1); opacity: 0.4; } }
+        @keyframes float3 { 0% { transform: translate(0,0) scale(1.1); opacity: 0.5; } 50% { transform: translate(-10vw,15vh) scale(0.9); opacity: 0.3; } 100% { transform: translate(10vw,-10vh) scale(1.2); opacity: 0.5; } }
       `}</style>
 
-      {/* NEW BACKGROUND ORBS */}
       <div className="orb orb-1" />
       <div className="orb orb-2" />
       <div className="orb orb-3" />
-
-      {/* NEW PARTICLE CANVAS */}
       <ParticleCanvas />
-
-      {/* NEW LAZY SPOTLIGHT CURSOR (DESKTOP ONLY) */}
       <SpotlightCursor />
 
-      {/* HEADER */}
       <header className="absolute top-0 left-0 w-full px-6 sm:px-10 py-6 sm:py-8 z-50 flex justify-between items-center bg-gradient-to-b from-[#080a06]/90 to-transparent">
         <div className="serif-font text-xl sm:text-2xl tracking-[0.1em] text-[#c8a96e] uppercase font-light">Binghatti</div>
-        
         {view === 'presentation' && (
           <div className="hidden md:flex gap-2 px-2">
             {slides.map((_, i) => (
@@ -958,33 +840,23 @@ const App = () => {
             ))}
           </div>
         )}
-
         {view === 'presentation' && (
           <div className="flex gap-3 sm:gap-5">
-            <button onClick={handlePrev} className="nav-btn w-12 h-12 rounded-full flex items-center justify-center text-[#c8a96e] border border-[#c8a96e]/20 bg-[#080a06]/50">
-              <ChevronLeft size={20} />
-            </button>
-            <button onClick={handleNext} className="nav-btn w-12 h-12 rounded-full flex items-center justify-center text-[#c8a96e] border border-[#c8a96e]/20 bg-[#080a06]/50">
-              <ChevronRight size={20} />
-            </button>
+            <button onClick={handlePrev} className="nav-btn w-12 h-12 rounded-full flex items-center justify-center text-[#c8a96e] border border-[#c8a96e]/20 bg-[#080a06]/50"><ChevronLeft size={20} /></button>
+            <button onClick={handleNext} className="nav-btn w-12 h-12 rounded-full flex items-center justify-center text-[#c8a96e] border border-[#c8a96e]/20 bg-[#080a06]/50"><ChevronRight size={20} /></button>
           </div>
         )}
       </header>
 
-      {/* MAIN VIEW CONTROLLER */}
       {view === 'presentation' ? renderPresentation() : renderDetailsPage()}
 
-      {/* GLOBAL REGISTER INTEREST BUTTON */}
-      <button 
-        onClick={() => setShowLeadForm(true)}
-        className="fixed bottom-20 right-6 z-[90] flex items-center gap-3 bg-[#c8a96e] text-[#080a06] px-6 py-4 rounded-full text-xs tracking-[0.2em] uppercase font-bold hover:scale-105 hover:bg-[#e2c98a] transition-all shadow-[0_0_30px_rgba(200,169,110,0.3)] group"
-      >
+      <button onClick={() => setShowLeadForm(true)}
+        className="fixed bottom-20 right-6 z-[90] flex items-center gap-3 bg-[#c8a96e] text-[#080a06] px-6 py-4 rounded-full text-xs tracking-[0.2em] uppercase font-bold hover:scale-105 hover:bg-[#e2c98a] transition-all shadow-[0_0_30px_rgba(200,169,110,0.3)] group">
         <span className="hidden sm:block">Register Interest</span>
         <span className="sm:hidden">Register</span>
         <Send size={14} className="group-hover:translate-x-1 transition-transform" />
       </button>
 
-      {/* SLIDE COUNTER */}
       {view === 'presentation' && (
         <div className="absolute bottom-16 left-0 w-full flex justify-center z-40 pointer-events-none mb-1">
           <div className="text-[0.6rem] sm:text-xs tracking-[0.4em] uppercase text-[#6a6b57] bg-[#080a06]/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/5">
@@ -993,7 +865,6 @@ const App = () => {
         </div>
       )}
 
-      {/* WATERMARK STRIP */}
       <a href={WA_LINK} target="_blank" rel="noopener noreferrer" className="interactive-watermark-bar">
         <div className="watermark-content">
           <span className="watermark-label">Exclusively by {PERSONAL_TAG}</span>
@@ -1002,7 +873,6 @@ const App = () => {
         </div>
       </a>
 
-      {/* MODALS */}
       {selectedImage && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#080a06]/95 backdrop-blur-md p-4 animate-fade-in" onClick={() => setSelectedImage(null)}>
           <button className="absolute top-6 right-6 text-[#c8a96e] p-3 bg-[#1e2019]/50 rounded-full border border-[#c8a96e]/20" onClick={() => setSelectedImage(null)}><X size={28} /></button>
@@ -1010,25 +880,15 @@ const App = () => {
         </div>
       )}
       
-      {/* LEAD GENERATION MODAL */}
       {showLeadForm && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#080a06]/95 backdrop-blur-md p-4 animate-fade-in">
           <div className="relative w-full max-w-md border border-[#c8a96e]/30 bg-[#080a06] p-8 sm:p-12 rounded-3xl shadow-[0_0_50px_rgba(200,169,110,0.15)]">
-            <button 
-              className="absolute top-5 right-5 text-[#c8a96e] hover:text-white transition-colors"
-              onClick={() => setShowLeadForm(false)}
-            >
-              <X size={24} />
-            </button>
-            
+            <button className="absolute top-5 right-5 text-[#c8a96e] hover:text-white transition-colors" onClick={() => setShowLeadForm(false)}><X size={24} /></button>
             <h3 className="serif-font text-4xl sm:text-5xl text-[#ede0c4] mb-3 text-center">Register Interest</h3>
             <p className="text-xs tracking-[0.2em] uppercase text-[#6a6b57] mb-10 text-center">Please provide your details below</p>
-            
             {submitSuccess ? (
               <div className="flex flex-col items-center justify-center py-10 text-center animate-fade-in">
-                <div className="w-20 h-20 rounded-full border-2 border-[#c8a96e] flex items-center justify-center text-[#c8a96e] mb-6">
-                  <Check size={40} />
-                </div>
+                <div className="w-20 h-20 rounded-full border-2 border-[#c8a96e] flex items-center justify-center text-[#c8a96e] mb-6"><Check size={40} /></div>
                 <h4 className="serif-font text-3xl text-[#ede0c4] mb-3">Thank You!</h4>
                 <p className="text-xs tracking-[0.1em] text-[#6a6b57] uppercase">Your request has been submitted securely.</p>
               </div>
@@ -1036,44 +896,22 @@ const App = () => {
               <form onSubmit={handleLeadSubmit} className="flex flex-col gap-6 animate-fade-in">
                 <div>
                   <label className="text-[0.65rem] sm:text-xs tracking-[0.2em] uppercase text-[#c8a96e]">Full Name</label>
-                  <input 
-                    required
-                    type="text" 
-                    value={leadForm.name}
-                    onChange={e => setLeadForm({...leadForm, name: e.target.value})}
-                    className="w-full bg-transparent border-b border-[#c8a96e]/30 text-[#ede0c4] py-3 focus:outline-none focus:border-[#c8a96e] text-base transition-colors"
-                  />
+                  <input required type="text" value={leadForm.name} onChange={e => setLeadForm({...leadForm, name: e.target.value})}
+                    className="w-full bg-transparent border-b border-[#c8a96e]/30 text-[#ede0c4] py-3 focus:outline-none focus:border-[#c8a96e] text-base transition-colors" />
                 </div>
                 <div>
                   <label className="text-[0.65rem] sm:text-xs tracking-[0.2em] uppercase text-[#c8a96e]">Email Address</label>
-                  <input 
-                    required
-                    type="email" 
-                    value={leadForm.email}
-                    onChange={e => setLeadForm({...leadForm, email: e.target.value})}
-                    className="w-full bg-transparent border-b border-[#c8a96e]/30 text-[#ede0c4] py-3 focus:outline-none focus:border-[#c8a96e] text-base transition-colors"
-                  />
+                  <input required type="email" value={leadForm.email} onChange={e => setLeadForm({...leadForm, email: e.target.value})}
+                    className="w-full bg-transparent border-b border-[#c8a96e]/30 text-[#ede0c4] py-3 focus:outline-none focus:border-[#c8a96e] text-base transition-colors" />
                 </div>
                 <div>
                   <label className="text-[0.65rem] sm:text-xs tracking-[0.2em] uppercase text-[#c8a96e]">Phone Number</label>
-                  <input 
-                    required
-                    type="tel" 
-                    value={leadForm.phone}
-                    onChange={e => setLeadForm({...leadForm, phone: e.target.value})}
-                    className="w-full bg-transparent border-b border-[#c8a96e]/30 text-[#ede0c4] py-3 focus:outline-none focus:border-[#c8a96e] text-base transition-colors"
-                  />
+                  <input required type="tel" value={leadForm.phone} onChange={e => setLeadForm({...leadForm, phone: e.target.value})}
+                    className="w-full bg-transparent border-b border-[#c8a96e]/30 text-[#ede0c4] py-3 focus:outline-none focus:border-[#c8a96e] text-base transition-colors" />
                 </div>
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="mt-6 w-full flex items-center justify-center gap-3 bg-[#c8a96e] text-[#080a06] py-5 text-[0.7rem] sm:text-xs tracking-[0.2em] uppercase font-bold hover:bg-[#e2c98a] transition-all disabled:opacity-60 disabled:cursor-not-allowed rounded-xl"
-                >
-                  {isSubmitting ? 'Sending...' : (
-                    <>
-                      Submit Request <Send size={16} />
-                    </>
-                  )}
+                <button type="submit" disabled={isSubmitting}
+                  className="mt-6 w-full flex items-center justify-center gap-3 bg-[#c8a96e] text-[#080a06] py-5 text-[0.7rem] sm:text-xs tracking-[0.2em] uppercase font-bold hover:bg-[#e2c98a] transition-all disabled:opacity-60 disabled:cursor-not-allowed rounded-xl">
+                  {isSubmitting ? 'Sending...' : <><span>Submit Request</span><Send size={16} /></>}
                 </button>
               </form>
             )}
