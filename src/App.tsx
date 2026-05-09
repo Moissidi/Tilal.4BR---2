@@ -210,9 +210,9 @@ const App = () => {
     },
     {
       id: 'pricing',
-      eyebrow: 'Financial Overview',
-      title: 'Payment & Inventory',
-      subtitle: '60/40 Plans & Unit Specifications',
+      eyebrow: 'Payment & Inventory',
+      title: '60/40 % Payment Plans',
+      subtitle: 'Interactive Calculator & Matrix',
       pricingInfo: {
         plans: [
           {
@@ -337,8 +337,8 @@ const App = () => {
       transactions: {
         title: "SALES TRANSACTIONS",
         subtitle: "4 BEDROOM TOWNHOUSES (2026)",
-        ready: { type: "READY", label: "AVERAGE PSF (AED)", value: "1,806 PSF", growth: "3.4%" },
-        offPlan: { type: "OFF-PLAN", label: "AVERAGE PSF (AED)", value: "1,715 PSF", growth: "8.3%" }
+        ready: { type: "READY", label: "AVERAGE PSF (AED)", value: "1,806", growth: "3.4%" },
+        offPlan: { type: "OFF-PLAN", label: "AVERAGE PSF (AED)", value: "1,715", growth: "8.3%" }
       },
       footer: 'SOURCE: DXB INTERACT, BAYUT & DLD'
     },
@@ -647,9 +647,9 @@ const App = () => {
                           {slide.matrix?.map((row, idx) => (
                             <tr key={idx} className="border-b border-[#1e2019] group hover:bg-[#c8a96e]/5 transition-colors">
                               <td className="py-6 px-8 text-sm sm:text-base text-[#ede0c4] whitespace-nowrap tracking-wide">{row.type}</td>
-                              <td className="py-6 px-8 text-base sm:text-xl text-[#c8a96e] text-right serif-font font-medium">{row.priceRange}</td>
-                              <td className="py-6 px-8 text-sm sm:text-base text-[#ede0c4]/80 text-right serif-font tracking-wide">{row.bua}</td>
-                              <td className="py-6 px-8 text-sm sm:text-base text-[#ede0c4]/60 text-right serif-font tracking-wide">{row.plot}</td>
+                              <td className="py-6 px-8 text-base sm:text-lg text-[#c8a96e] text-right font-medium">{row.priceRange}</td>
+                              <td className="py-6 px-8 text-sm sm:text-base text-[#ede0c4]/80 text-right">{row.bua}</td>
+                              <td className="py-6 px-8 text-sm sm:text-base text-[#ede0c4]/60 text-right">{row.plot}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -685,9 +685,9 @@ const App = () => {
                               </span>
                             )}
                           </td>
-                          <td className={`py-6 px-8 text-base sm:text-xl text-right serif-font font-medium ${row.highlighted ? 'text-[#c8a96e]' : 'text-[#c8a96e]'}`}>{row.psf}</td>
-                          <td className={`py-6 px-8 text-sm sm:text-base text-right serif-font tracking-wide ${row.highlighted ? 'text-white' : 'text-[#ede0c4]/80'}`}>{row.bua}</td>
-                          <td className="py-6 px-8 text-sm sm:text-base text-[#ede0c4]/60 text-right serif-font tracking-wide">{row.plot}</td>
+                          <td className={`py-6 px-8 text-base sm:text-lg text-right font-medium ${row.highlighted ? 'text-[#c8a96e]' : 'text-[#c8a96e]'}`}>{row.psf}</td>
+                          <td className={`py-6 px-8 text-sm sm:text-base text-right ${row.highlighted ? 'text-white font-medium' : 'text-[#ede0c4]/80'}`}>{row.bua}</td>
+                          <td className="py-6 px-8 text-sm sm:text-base text-[#ede0c4]/60 text-right">{row.plot}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -708,7 +708,7 @@ const App = () => {
                            style={{ background: 'radial-gradient(circle at 40% 30%, rgba(200, 210, 190, 0.2) 0%, rgba(10, 12, 8, 1) 70%)' }}>
                         <p className="text-[0.65rem] sm:text-xs tracking-[0.15em] uppercase text-[#ede0c4]/80 mb-6 leading-relaxed max-w-[80%]">{slide.transactions?.ready.label}</p>
                         <div className="flex items-center justify-center gap-3 mt-2">
-                          <span className="text-xl sm:text-2xl text-[#ede0c4] tracking-widest">{slide.transactions?.ready.value}</span>
+                          <span className="text-xl sm:text-2xl text-[#ede0c4] font-medium">{slide.transactions?.ready.value}</span>
                           <div className="bg-[#1e221a] flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
                             <span className="text-xs sm:text-sm text-white font-medium">{slide.transactions?.ready.growth}</span>
                             <ChevronUp size={16} className="text-[#4ade80]" strokeWidth={4} />
@@ -724,7 +724,7 @@ const App = () => {
                            style={{ background: 'radial-gradient(circle at 40% 30%, rgba(200, 210, 190, 0.2) 0%, rgba(10, 12, 8, 1) 70%)' }}>
                         <p className="text-[0.65rem] sm:text-xs tracking-[0.15em] uppercase text-[#ede0c4]/80 mb-6 leading-relaxed max-w-[80%]">{slide.transactions?.offPlan.label}</p>
                         <div className="flex items-center justify-center gap-3 mt-2">
-                          <span className="text-xl sm:text-2xl text-[#ede0c4] tracking-widest">{slide.transactions?.offPlan.value}</span>
+                          <span className="text-xl sm:text-2xl text-[#ede0c4] font-medium">{slide.transactions?.offPlan.value}</span>
                           <div className="bg-[#1e221a] flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
                             <span className="text-xs sm:text-sm text-white font-medium">{slide.transactions?.offPlan.growth}</span>
                             <ChevronUp size={16} className="text-[#4ade80]" strokeWidth={4} />
